@@ -15,6 +15,7 @@ data/processed/*.csv
 # Build artifacts
 *.pbix
 powerbi/screenshots/*.png
+excel/FinanceOps_Reconciliation.xlsx
 
 # OS
 .DS_Store
