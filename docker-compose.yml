@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: financeops_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-financeops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-financeops}
+      POSTGRES_DB: ${POSTGRES_DB:-financeops}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-financeops}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
