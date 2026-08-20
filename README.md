@@ -1,12 +1,9 @@
-# FinanceOps360 — Financial Operations Analytics & Automation Platform
+# FinFlow — Financial Operations Analytics & Automation Platform
 
 End-to-end finance & supply-chain analytics platform that reconciles
 transactions, detects discrepancies/anomalies, tracks inventory, and exposes
 executive reporting via SQL, Excel, Power BI, FastAPI and an AI copilot.
 
-Built for the **Morphle Labs — Finance Operations Intern** profile: AP/AR,
-bank reconciliation, supply-chain finance, distributed inventory, controls,
-and AI-assisted analysis.
 
 ## Stack
 PostgreSQL · SQL · Python (pandas/numpy/Faker) · Excel (openpyxl) · Power BI
