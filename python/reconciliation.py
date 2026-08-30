@@ -101,11 +101,6 @@ def reconcile(invoices, payments, bank, vendors=None):
             if vname and difflib.SequenceMatcher(None, vname.lower(), cp.lower()).ratio() < 0.6:
                 notes.append(f"Bank counterparty '{cp}' does not match vendor '{vname}'.")
 
-        if float(pay["amount"]) < inv_total - tol:
-            results.append(_row(iid, pid, ref, "PARTIAL_PAYMENT", conf, diff,
-                                True, "Partial payment recorded. " + " ".join(notes)))
-            continue
-
         results.append(_row(iid, pid, ref, "MATCHED", conf, diff, True, " ".join(notes)))
 
     return pd.DataFrame(results)

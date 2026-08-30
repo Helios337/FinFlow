@@ -28,6 +28,5 @@ def execute_sql_file(path):
 
 
 def run_query(sql, params=None):
-    from sqlalchemy import text
     with get_engine().connect() as conn:
         return conn.execute(text(sql), params or {}).mappings().all()

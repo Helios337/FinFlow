@@ -66,6 +66,6 @@ DB_URL = (
     f"postgresql+psycopg://{os.getenv('POSTGRES_USER','financeops')}"
     f":{os.getenv('POSTGRES_PASSWORD','financeops')}"
     f"@{os.getenv('POSTGRES_HOST','localhost')}"
-    f":{os.getenv('POSTGRES_PORT','5432')}"
+    f":{os.getenv('POSTGRES_PORT','5433')}"
     f"/{os.getenv('POSTGRES_DB','financeops')}"
 )

@@ -6,6 +6,7 @@ Run order:
 """
 from __future__ import annotations
 import pandas as pd
+from sqlalchemy import text
 
 import config as C
 from db import get_engine, execute_sql_file
@@ -28,7 +29,7 @@ def main():
     # truncate result tables for idempotent reload
     with engine.begin() as conn:
         for t in ["reconciliation_results", "anomalies", "controls_violations"]:
-            conn.execute(__import__("sqlalchemy").text(f"TRUNCATE TABLE {t}"))
+            conn.execute(text(f"TRUNCATE TABLE {t}"))
 
     print("Reconciliation -> reconciliation_results")
     rf = rload()

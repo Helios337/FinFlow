@@ -16,9 +16,8 @@ def analyze(frames):
     # valuation
     inv["inventory_value"] = inv["quantity"] * inv["unit_cost"]
 
-    # warehouse utilization (latest snapshot per warehouse)
+    # warehouse utilization
     inv["snapshot_date"] = pd.to_datetime(inv["snapshot_date"])
-    latest = inv.sort_values("snapshot_date").groupby("warehouse_id").tail(1) if False else inv
     util = (inv.groupby("warehouse_id")["inventory_value"].sum()
             .reset_index().rename(columns={"inventory_value": "total_value"}))
     util["capacity_units"] = util["warehouse_id"].map(cap)
