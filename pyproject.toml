@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["notebooks"]
+
+[tool.ruff.lint]
+# E402 is enabled because backend/ and tests/ use sys.path shims that place
+# some imports after code (guarded by `# noqa: E402` in those files).
+select = ["E402", "E7", "E9", "F", "I", "UP", "RUF", "B", "SIM"]

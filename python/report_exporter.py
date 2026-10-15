@@ -3,15 +3,18 @@
 Run:
     python python/report_exporter.py
 """
+
 from __future__ import annotations
-import pandas as pd
 
 import config as C
-from reconciliation import load_frames as rload, reconcile
-from validation import load_frames as vload, run_controls
+import pandas as pd
 from anomaly_detection import detect
-from inventory_analysis import analyze
 from finance_metrics import compute
+from inventory_analysis import analyze
+from reconciliation import load_frames as rload
+from reconciliation import reconcile
+from validation import load_frames as vload
+from validation import run_controls
 
 
 def main():
@@ -30,7 +33,7 @@ def main():
     anomalies.to_csv(C.PROCESSED_DIR / "anomaly_report.csv", index=False)
 
     print("Inventory ...")
-    inv, util, low, over, inv_summary = analyze(vf)
+    _inv, util, low, over, inv_summary = analyze(vf)
     low.to_csv(C.PROCESSED_DIR / "inventory_low_stock.csv", index=False)
     over.to_csv(C.PROCESSED_DIR / "inventory_overstock.csv", index=False)
     util.to_csv(C.PROCESSED_DIR / "warehouse_utilization.csv", index=False)
@@ -43,7 +46,7 @@ def main():
     print("Reconciliation:", recon["status"].value_counts().to_dict())
     print("Controls by rule:", controls["rule_id"].value_counts().to_dict())
     print("Anomalies:", len(anomalies))
-    print("Inventory value: %.2f" % inv_summary["total_inventory_value"])
+    print(f"Inventory value: {inv_summary['total_inventory_value']:.2f}")
     print("Metrics:", metrics)
 
 

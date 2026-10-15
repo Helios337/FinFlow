@@ -3,11 +3,10 @@
 Run order:
     python python/db_loader.py
 """
-from pathlib import Path
-import pandas as pd
 
 import config as C
-from db import get_engine, execute_sql_file
+import pandas as pd
+from db import execute_sql_file, get_engine
 
 TABLE_ORDER = [
     "fx_rates",
@@ -35,8 +34,11 @@ def main():
     engine = get_engine()
     # idempotent reload: clear existing rows (FK-safe)
     from sqlalchemy import text as _text
+
     with engine.begin() as conn:
-        conn.execute(_text("TRUNCATE TABLE " + ", ".join(TABLE_ORDER) + " RESTART IDENTITY CASCADE"))
+        conn.execute(
+            _text("TRUNCATE TABLE " + ", ".join(TABLE_ORDER) + " RESTART IDENTITY CASCADE")
+        )
     for table in TABLE_ORDER:
         csv_path = C.RAW_DIR / f"{table}.csv"
         if not csv_path.exists():

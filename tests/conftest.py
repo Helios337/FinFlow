@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -8,17 +9,27 @@ sys.path.insert(0, str(ROOT / "python"))
 sys.path.insert(0, str(ROOT / "backend"))
 
 import config as C  # noqa: E402
-from reconciliation import load_frames as rload, reconcile  # noqa: E402
-from validation import load_frames as vload, run_controls  # noqa: E402
 from anomaly_detection import detect  # noqa: E402
+from reconciliation import load_frames as rload  # noqa: E402
+from reconciliation import reconcile  # noqa: E402
+from validation import load_frames as vload  # noqa: E402
+from validation import run_controls  # noqa: E402
 
 
 @pytest.fixture(scope="session")
 def raw():
-    return {k: pd.read_csv(C.RAW_DIR / f"{k}.csv") for k in [
-        "vendor_invoices", "payments", "bank_transactions", "inventory",
-        "customer_invoices", "vendors", "warehouses",
-    ]}
+    return {
+        k: pd.read_csv(C.RAW_DIR / f"{k}.csv")
+        for k in [
+            "vendor_invoices",
+            "payments",
+            "bank_transactions",
+            "inventory",
+            "customer_invoices",
+            "vendors",
+            "warehouses",
+        ]
+    }
 
 
 @pytest.fixture(scope="session")

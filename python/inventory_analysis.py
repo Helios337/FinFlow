@@ -1,9 +1,9 @@
 """Inventory analytics: valuation, low/over-stock, warehouse utilization."""
-from __future__ import annotations
-import pandas as pd
-import numpy as np
 
-import config as C
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
 
 SAFETY_STOCK = 50
 
@@ -16,12 +16,18 @@ def analyze(frames):
     # valuation
     inv["inventory_value"] = inv["quantity"] * inv["unit_cost"]
 
-    # warehouse utilization
+    # warehouse utilization (units on hand vs capacity)
     inv["snapshot_date"] = pd.to_datetime(inv["snapshot_date"])
-    util = (inv.groupby("warehouse_id")["inventory_value"].sum()
-            .reset_index().rename(columns={"inventory_value": "total_value"}))
+    util = (
+        inv.groupby("warehouse_id")["quantity"]
+        .sum()
+        .reset_index()
+        .rename(columns={"quantity": "total_units"})
+    )
     util["capacity_units"] = util["warehouse_id"].map(cap)
-    util["utilization_pct"] = (util["total_value"] / util["capacity_units"].replace(0, np.nan) * 100).round(2)
+    util["utilization_pct"] = (
+        util["total_units"] / util["capacity_units"].replace(0, np.nan) * 100
+    ).round(2)
 
     # low / over stock per product (median-based)
     med = inv.groupby("product_id")["quantity"].median()
@@ -42,8 +48,9 @@ def analyze(frames):
 
 def main():
     from validation import load_frames
+
     frames = load_frames()
-    inv, util, low, over, summary = analyze(frames)
+    _inv, util, _low, _over, summary = analyze(frames)
     print("Inventory summary:")
     for k, v in summary.items():
         print(f"  {k}: {v}")

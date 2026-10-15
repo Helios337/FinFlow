@@ -1,4 +1,4 @@
-# Power BI — Dashboard Documentation
+# Power BI - Dashboard Documentation
 
 Author the model in **Power BI Desktop** (Windows VM/Parallels), then publish
 to **Power BI Service (free)**. Connect to PostgreSQL via the Postgres connector
@@ -19,13 +19,13 @@ Amount, Overdue Amount, Payment Rate, On-Time Payment %, Avg Payment Delay,
 Inventory Value (INR via fx_rates), Mismatch Rate, Inventory Turnover (proxy).
 
 ## Dashboards
-1. **Executive Finance** — revenue/expense/payables/receivables trends, vendor
+1. **Executive Finance** - revenue/expense/payables/receivables trends, vendor
    spend, payment aging, reconciliation status.
-2. **Reconciliation** — matched/unmatched/mismatched/duplicate counts, mismatch
+2. **Reconciliation** - matched/unmatched/mismatched/duplicate counts, mismatch
    value, vendor-wise discrepancies, top discrepancies table.
-3. **Supply Chain** — inventory by warehouse/country/category, low-stock &
+3. **Supply Chain** - inventory by warehouse/country/category, low-stock &
    overstock products, warehouse utilization, inventory movement.
-4. **Accounts Payable** — outstanding payable, vendor aging (Current/1–30/
+4. **Accounts Payable** - outstanding payable, vendor aging (Current/1–30/
    31–60/61–90/90+), overdue, vendor concentration, payment delays.
 
 ## Build notes

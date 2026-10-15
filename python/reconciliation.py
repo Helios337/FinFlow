@@ -6,14 +6,13 @@ Implements the strict status priority (mutually exclusive):
 
 Reads from CSVs (or DataFrames) and writes reconciliation_results.
 """
-from __future__ import annotations
-import difflib
-from pathlib import Path
 
-import pandas as pd
-import numpy as np
+from __future__ import annotations
+
+import difflib
 
 import config as C
+import pandas as pd
 
 
 def load_frames():
@@ -47,13 +46,33 @@ def reconcile(invoices, payments, bank, vendors=None):
 
         # DUPLICATE (cloned id with -D, or identical vendor+amount)
         if str(iid).endswith("-D") or (f"{inv['vendor_id']}|{inv_total}" in dup_keys):
-            results.append(_row(iid, None, None, "DUPLICATE", 1.0, None,
-                                False, "Duplicate invoice detected (same vendor + amount)."))
+            results.append(
+                _row(
+                    iid,
+                    None,
+                    None,
+                    "DUPLICATE",
+                    1.0,
+                    None,
+                    False,
+                    "Duplicate invoice detected (same vendor + amount).",
+                )
+            )
             continue
 
         if iid not in pay_by_inv.groups:
-            results.append(_row(iid, None, None, "MISSING_PAYMENT", 1.0, None,
-                                None, "Invoice has no linked payment record."))
+            results.append(
+                _row(
+                    iid,
+                    None,
+                    None,
+                    "MISSING_PAYMENT",
+                    1.0,
+                    None,
+                    None,
+                    "Invoice has no linked payment record.",
+                )
+            )
             continue
 
         pay = pay_by_inv.get_group(iid).iloc[0]
@@ -64,20 +83,49 @@ def reconcile(invoices, payments, bank, vendors=None):
         notes = []
 
         if pay_cur != cur:
-            results.append(_row(iid, pid, ref, "CURRENCY_MISMATCH", conf,
-                                _amount_diff(inv_total, float(pay["amount"])),
-                                False, f"Invoice {cur} vs payment {pay_cur}."))
+            results.append(
+                _row(
+                    iid,
+                    pid,
+                    ref,
+                    "CURRENCY_MISMATCH",
+                    conf,
+                    _amount_diff(inv_total, float(pay["amount"])),
+                    False,
+                    f"Invoice {cur} vs payment {pay_cur}.",
+                )
+            )
             continue
 
         diff = _amount_diff(inv_total, float(pay["amount"]))
         tol = max(C.AMOUNT_TOLERANCE * inv_total, 0.01)
         if float(pay["amount"]) > inv_total + tol:
-            results.append(_row(iid, pid, ref, "AMOUNT_MISMATCH", conf, diff,
-                                True, f"Overpayment: paid {diff} more than invoice total."))
+            results.append(
+                _row(
+                    iid,
+                    pid,
+                    ref,
+                    "AMOUNT_MISMATCH",
+                    conf,
+                    diff,
+                    True,
+                    f"Overpayment: paid {diff} more than invoice total.",
+                )
+            )
             continue
         if float(pay["amount"]) < inv_total - tol:
-            results.append(_row(iid, pid, ref, "PARTIAL_PAYMENT", conf, diff,
-                                True, f"Partial/under payment: {diff} short of invoice total."))
+            results.append(
+                _row(
+                    iid,
+                    pid,
+                    ref,
+                    "PARTIAL_PAYMENT",
+                    conf,
+                    diff,
+                    True,
+                    f"Partial/under payment: {diff} short of invoice total.",
+                )
+            )
             continue
 
         # bank match by reference (debit side)
@@ -89,8 +137,18 @@ def reconcile(invoices, payments, bank, vendors=None):
                 bank_match = cands.iloc[0]
 
         if bank_match is None:
-            results.append(_row(iid, pid, ref, "MISSING_BANK_TRANSACTION", conf, diff,
-                                True, "Payment has no matching bank transaction by reference."))
+            results.append(
+                _row(
+                    iid,
+                    pid,
+                    ref,
+                    "MISSING_BANK_TRANSACTION",
+                    conf,
+                    diff,
+                    True,
+                    "Payment has no matching bank transaction by reference.",
+                )
+            )
             continue
 
         # counterparty sanity (soft review flag, not a hard status change)
@@ -106,8 +164,9 @@ def reconcile(invoices, payments, bank, vendors=None):
     return pd.DataFrame(results)
 
 
-def _row(invoice_id, payment_id, bank_reference, status, confidence,
-         amount_diff, currency_match, notes):
+def _row(
+    invoice_id, payment_id, bank_reference, status, confidence, amount_diff, currency_match, notes
+):
     return {
         "invoice_id": invoice_id,
         "payment_id": payment_id,
