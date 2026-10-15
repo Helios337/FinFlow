@@ -5,13 +5,13 @@ invoice → payment (by invoice_id) → bank (by payment.bank_reference).
 Bank transactions are signed: debits negative, credits positive.
 
 ## Status priority (mutually exclusive)
-1. **DUPLICATE** — cloned invoice id (`-D`) or identical vendor+amount.
-2. **CURRENCY_MISMATCH** — payment currency ≠ invoice currency.
-3. **AMOUNT_MISMATCH** — payment > invoice total + tolerance (overpayment).
-4. **MISSING_BANK_TRANSACTION** — payment has no bank debit by reference.
-5. **PARTIAL_PAYMENT** — payment < invoice total − tolerance.
-6. **MATCHED** — fully matched within tolerance.
-7. **MISSING_PAYMENT** — invoice has no payment record.
+1. **DUPLICATE** - cloned invoice id (`-D`) or identical vendor+amount.
+2. **CURRENCY_MISMATCH** - payment currency ≠ invoice currency.
+3. **AMOUNT_MISMATCH** - payment > invoice total + tolerance (overpayment).
+4. **MISSING_BANK_TRANSACTION** - payment has no bank debit by reference.
+5. **PARTIAL_PAYMENT** - payment < invoice total − tolerance.
+6. **MATCHED** - fully matched within tolerance.
+7. **MISSING_PAYMENT** - invoice has no payment record.
 
 Tolerance: `max(0.5% of invoice total, 0.01)`.
 

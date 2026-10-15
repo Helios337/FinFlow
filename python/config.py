@@ -1,6 +1,8 @@
 """Central configuration for FinanceOps360."""
-from pathlib import Path
+
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -63,9 +65,19 @@ AMOUNT_TOLERANCE = 0.005  # 0.5%
 DATE_WINDOW_DAYS = 5
 
 DB_URL = (
-    f"postgresql+psycopg://{os.getenv('POSTGRES_USER','financeops')}"
-    f":{os.getenv('POSTGRES_PASSWORD','financeops')}"
-    f"@{os.getenv('POSTGRES_HOST','localhost')}"
-    f":{os.getenv('POSTGRES_PORT','5433')}"
-    f"/{os.getenv('POSTGRES_DB','financeops')}"
+    f"postgresql+psycopg://{os.getenv('POSTGRES_USER', 'financeops')}"
+    f":{os.getenv('POSTGRES_PASSWORD', 'financeops')}"
+    f"@{os.getenv('POSTGRES_HOST', 'localhost')}"
+    f":{os.getenv('POSTGRES_PORT', '5433')}"
+    f"/{os.getenv('POSTGRES_DB', 'financeops')}"
+)
+
+# Read-only role for the FastAPI backend / AI copilot. See
+# sql/readonly_role.sql (created by python/persist.py).
+DB_RO_URL = (
+    f"postgresql+psycopg://{os.getenv('POSTGRES_RO_USER', 'financeops_ro')}"
+    f":{os.getenv('POSTGRES_RO_PASSWORD', 'financeops')}"
+    f"@{os.getenv('POSTGRES_HOST', 'localhost')}"
+    f":{os.getenv('POSTGRES_PORT', '5433')}"
+    f"/{os.getenv('POSTGRES_DB', 'financeops')}"
 )

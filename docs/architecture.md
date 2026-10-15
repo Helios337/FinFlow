@@ -1,4 +1,4 @@
-# Architecture — FinanceOps360
+# Architecture - FinanceOps360
 
 ```
 Synthetic Data Generator (Python/Faker)

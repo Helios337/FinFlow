@@ -4,15 +4,18 @@ Run order:
     python python/db_loader.py      # raw tables + schema
     python python/persist.py        # analysis result tables
 """
+
 from __future__ import annotations
-import pandas as pd
-from sqlalchemy import text
 
 import config as C
-from db import get_engine, execute_sql_file
-from reconciliation import load_frames as rload, reconcile
-from validation import load_frames as vload, run_controls
+import pandas as pd
 from anomaly_detection import detect
+from db import execute_sql_file, get_engine
+from reconciliation import load_frames as rload
+from reconciliation import reconcile
+from sqlalchemy import text
+from validation import load_frames as vload
+from validation import run_controls
 
 
 def _write(df, table, engine):
@@ -24,6 +27,8 @@ def main():
     # ensure schema present
     execute_sql_file(C.BASE_DIR / "sql" / "schema.sql")
     execute_sql_file(C.BASE_DIR / "sql" / "views.sql")
+    # create / re-grant the read-only role used by the API + AI copilot
+    execute_sql_file(C.BASE_DIR / "sql" / "readonly_role.sql")
     engine = get_engine()
 
     # truncate result tables for idempotent reload

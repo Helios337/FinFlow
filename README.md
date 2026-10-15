@@ -1,4 +1,4 @@
-# FinFlow — Financial Operations Analytics & Automation Platform
+# FinFlow - Financial Operations Analytics & Automation Platform
 
 End-to-end finance & supply-chain analytics platform that reconciles
 transactions, detects discrepancies/anomalies, tracks inventory, and exposes
@@ -40,25 +40,35 @@ uvicorn backend.main:app --reload   # API at http://localhost:8000/docs
 ```
 
 ## Modules
-- **Data generation** — ~80K deterministic, seeded synthetic records with a
+- **Data generation** - ~80K deterministic, seeded synthetic records with a
   documented error-injection catalogue.
-- **Reconciliation engine** — strict status priority (DUPLICATE > CURRENCY_MISMATCH
+- **Reconciliation engine** - strict status priority (DUPLICATE > CURRENCY_MISMATCH
   > AMOUNT_MISMATCH > MISSING_BANK > PARTIAL > MATCHED / MISSING_PAYMENT).
-- **Controls** — 8 rules (C1–C8): duplicates, authorization, PO/invoice match,
+- **Controls** - 8 rules (C1-C8): duplicates, authorization, PO/invoice match,
   inventory identity, late payment, wrong counterparty, duplicate bank.
-- **Anomaly detection** — z-score, IQR, vendor-baseline (explainable).
-- **Excel** — 8-sheet reconciliation workbook with conditional formatting.
-- **Power BI** — star schema + 4 dashboards (Executive, Reconciliation,
+- **Anomaly detection** - z-score, IQR, vendor-baseline (explainable).
+- **Excel** - 8-sheet reconciliation workbook with conditional formatting.
+- **Power BI** - star schema + 4 dashboards (Executive, Reconciliation,
   Supply Chain, AP); author in Windows VM Desktop, publish to Service.
-- **FastAPI + AI** — REST endpoints + read-only, guardrailed NL→SQL copilot.
+- **FastAPI + AI** - REST endpoints + read-only, guardrailed NL→SQL copilot.
 
 ## API
 `GET /metrics /reconciliation /anomalies /inventory /vendors /invoices
 /payments /transactions /controls` and `POST /ai/ask`.
 
 ## Tests
-`pytest tests/` — reconciliation & control recall on injected errors, metric
+`pytest tests/` - reconciliation & control recall on injected errors, metric
 sanity, and AI SQL guardrails. All green.
+
+Tests read the generated raw data from `data/raw/` (gitignored), so run the
+data generator first on a fresh clone:
+
+```bash
+python python/data_generator.py
+pytest tests/ -v
+```
+
+The CI workflow does this automatically (generate data, then lint + test).
 
 ## Results (sample run)
 - ~80K records; reconciliation match rate ~77%.

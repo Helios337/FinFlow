@@ -1,4 +1,4 @@
-# Data Dictionary — FinanceOps360
+# Data Dictionary - FinanceOps360
 
 All monetary amounts are positive except `bank_transactions.amount` (signed:
 debit < 0, credit > 0). `injected_error` columns are ground-truth tags for tests

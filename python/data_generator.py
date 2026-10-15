@@ -6,17 +6,16 @@ errors, then writes CSVs to data/raw/. Deterministic via config.SEED.
 Run:
     python python/data_generator.py
 """
+
 from __future__ import annotations
-import csv
+
 import random
 from datetime import date, timedelta
-from pathlib import Path
 
+import config as C
 import numpy as np
 import pandas as pd
 from faker import Faker
-
-import config as C
 
 fake = Faker()
 Faker.seed(C.SEED)
@@ -47,18 +46,22 @@ def gen_fx_rates():
     d = START
     while d <= END:
         for fc, rate in cur.items():
-            rows.append({
-                "rate_date": d.isoformat(),
-                "from_currency": fc,
-                "to_currency": "INR",
-                "rate": round(rate, 4),
-            })
-            rows.append({
-                "rate_date": d.isoformat(),
-                "from_currency": "INR",
-                "to_currency": fc,
-                "rate": round(1.0 / rate, 6),
-            })
+            rows.append(
+                {
+                    "rate_date": d.isoformat(),
+                    "from_currency": fc,
+                    "to_currency": "INR",
+                    "rate": round(rate, 4),
+                }
+            )
+            rows.append(
+                {
+                    "rate_date": d.isoformat(),
+                    "from_currency": "INR",
+                    "to_currency": fc,
+                    "rate": round(1.0 / rate, 6),
+                }
+            )
         # random walk
         for k in cur:
             cur[k] = max(1.0, cur[k] * np.random.normal(1.0, 0.01))
@@ -69,8 +72,15 @@ def gen_fx_rates():
 # ---------------------------------------------------------------------------
 # 2. Masters
 # ---------------------------------------------------------------------------
-VENDOR_CATS = ["Electronics", "Mechanical Components", "Laboratory Supplies",
-               "Packaging", "Logistics", "Software", "Maintenance"]
+VENDOR_CATS = [
+    "Electronics",
+    "Mechanical Components",
+    "Laboratory Supplies",
+    "Packaging",
+    "Logistics",
+    "Software",
+    "Maintenance",
+]
 CUSTOMER_TYPES = ["Hospital", "Diagnostic Laboratory", "Research Institute", "Distributor"]
 WH_NAMES = {
     "WH1": ("Bangalore DC", "India", "Bangalore", "Distribution"),
@@ -82,10 +92,18 @@ WH_NAMES = {
     "WH7": ("Frankfurt Hub", "Germany", "Frankfurt", "Transit"),
     "WH8": ("New Jersey Hub", "USA", "Newark", "Transit"),
 }
-PRODUCTS = ["Slide Scanner", "Robotic Microtome", "Imaging Module",
-            "Sample Processor", "Optical Components", "Replacement Parts",
-            "Calibration Kit", "Reagent Pack", "Control Software License",
-            "Cooling Unit"]
+PRODUCTS = [
+    "Slide Scanner",
+    "Robotic Microtome",
+    "Imaging Module",
+    "Sample Processor",
+    "Optical Components",
+    "Replacement Parts",
+    "Calibration Kit",
+    "Reagent Pack",
+    "Control Software License",
+    "Cooling Unit",
+]
 
 
 def gen_masters():
@@ -95,61 +113,71 @@ def gen_masters():
     for i in range(1, C.VOLUMES["vendors"] + 1):
         ctry = random.choice(countries_non_inr)
         cur = "INR" if ctry == "India" else random.choice(["USD", "EUR", "AED", "SGD"])
-        vendors.append({
-            "vendor_id": _code("V", i),
-            "vendor_name": fake.company(),
-            "country": ctry,
-            "region": "Domestic" if ctry == "India" else "International",
-            "vendor_category": random.choice(VENDOR_CATS),
-            "payment_terms_days": random.choice([15, 30, 45, 60]),
-            "currency": cur,
-            "status": "active",
-        })
+        vendors.append(
+            {
+                "vendor_id": _code("V", i),
+                "vendor_name": fake.company(),
+                "country": ctry,
+                "region": "Domestic" if ctry == "India" else "International",
+                "vendor_category": random.choice(VENDOR_CATS),
+                "payment_terms_days": random.choice([15, 30, 45, 60]),
+                "currency": cur,
+                "status": "active",
+            }
+        )
 
     for i in range(1, C.VOLUMES["customers"] + 1):
         ctry = random.choice(["India", "USA", "Germany", "UAE", "Singapore"])
         cur = "INR" if ctry == "India" else random.choice(["USD", "EUR", "AED", "SGD"])
-        customers.append({
-            "customer_id": _code("C", i),
-            "customer_name": fake.company(),
-            "country": ctry,
-            "region": "Domestic" if ctry == "India" else "International",
-            "customer_type": random.choice(CUSTOMER_TYPES),
-            "currency": cur,
-            "status": "active",
-        })
+        customers.append(
+            {
+                "customer_id": _code("C", i),
+                "customer_name": fake.company(),
+                "country": ctry,
+                "region": "Domestic" if ctry == "India" else "International",
+                "customer_type": random.choice(CUSTOMER_TYPES),
+                "currency": cur,
+                "status": "active",
+            }
+        )
 
     for i in range(1, C.VOLUMES["products"] + 1):
         name = f"{random.choice(PRODUCTS)} {fake.color_name().title()}"
         cost = round(np.random.lognormal(9, 1), 2)
-        products.append({
-            "product_id": _code("P", i),
-            "product_name": name,
-            "category": random.choice(VENDOR_CATS),
-            "unit_cost": cost,
-            "selling_price": round(cost * random.uniform(1.3, 2.2), 2),
-            "currency": "INR",
-        })
+        products.append(
+            {
+                "product_id": _code("P", i),
+                "product_name": name,
+                "category": random.choice(VENDOR_CATS),
+                "unit_cost": cost,
+                "selling_price": round(cost * random.uniform(1.3, 2.2), 2),
+                "currency": "INR",
+            }
+        )
 
     for wid, (nm, ctry, city, wtype) in WH_NAMES.items():
-        warehouses.append({
-            "warehouse_id": wid,
-            "warehouse_name": nm,
-            "country": ctry,
-            "city": city,
-            "warehouse_type": wtype,
-            "capacity_units": random.randint(20000, 80000),
-        })
+        warehouses.append(
+            {
+                "warehouse_id": wid,
+                "warehouse_name": nm,
+                "country": ctry,
+                "city": city,
+                "warehouse_type": wtype,
+                "capacity_units": random.randint(20000, 80000),
+            }
+        )
 
     depts = ["Finance", "Operations", "Procurement", "Logistics", "Quality", "IT"]
     for i in range(1, C.VOLUMES["employees"] + 1):
-        employees.append({
-            "employee_id": _code("E", i),
-            "employee_name": fake.name(),
-            "department": random.choice(depts),
-            "location": random.choice([w[2] for w in WH_NAMES.values()]),
-            "manager_id": None,
-        })
+        employees.append(
+            {
+                "employee_id": _code("E", i),
+                "employee_name": fake.name(),
+                "department": random.choice(depts),
+                "location": random.choice([w[2] for w in WH_NAMES.values()]),
+                "manager_id": None,
+            }
+        )
     # assign managers
     for e in employees:
         if random.random() < 0.7:
@@ -157,8 +185,13 @@ def gen_masters():
             if mgr["employee_id"] != e["employee_id"]:
                 e["manager_id"] = mgr["employee_id"]
 
-    return (pd.DataFrame(vendors), pd.DataFrame(customers), pd.DataFrame(products),
-            pd.DataFrame(warehouses), pd.DataFrame(employees))
+    return (
+        pd.DataFrame(vendors),
+        pd.DataFrame(customers),
+        pd.DataFrame(products),
+        pd.DataFrame(warehouses),
+        pd.DataFrame(employees),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -180,22 +213,26 @@ def gen_purchasing(vendors, products, warehouses):
             qty = random.randint(5, 200)
             price = round(p["unit_cost"] * random.uniform(0.8, 1.1), 2)
             total += qty * price
-            items.append({
-                "po_item_id": len(items) + 1,
+            items.append(
+                {
+                    "po_item_id": len(items) + 1,
+                    "po_id": po_id,
+                    "product_id": p["product_id"],
+                    "quantity": qty,
+                    "unit_price": price,
+                }
+            )
+        pos.append(
+            {
                 "po_id": po_id,
-                "product_id": p["product_id"],
-                "quantity": qty,
-                "unit_price": price,
-            })
-        pos.append({
-            "po_id": po_id,
-            "vendor_id": v["vendor_id"],
-            "po_date": po_date.isoformat(),
-            "warehouse_id": random.choice(wrows),
-            "currency": v["currency"],
-            "total_amount": round(total, 2),
-            "status": "approved",
-        })
+                "vendor_id": v["vendor_id"],
+                "po_date": po_date.isoformat(),
+                "warehouse_id": random.choice(wrows),
+                "currency": v["currency"],
+                "total_amount": round(total, 2),
+                "status": "approved",
+            }
+        )
     return pd.DataFrame(pos), pd.DataFrame(items)
 
 
@@ -210,28 +247,27 @@ def gen_vendor_invoices(pos, vendors):
     po_ids = pos["po_id"].tolist()
     for i in range(1, n + 1):
         po_id = random.choice(po_ids) if random.random() < 0.7 else None
-        if po_id:
-            v = vmap[pmap[po_id]["vendor_id"]]
-        else:
-            v = random.choice(list(vmap.values()))
+        v = vmap[pmap[po_id]["vendor_id"]] if po_id else random.choice(list(vmap.values()))
         inv_date = _rand_date()
         terms = v["payment_terms_days"]
         due = inv_date + timedelta(days=terms)
         subtotal = round(np.random.lognormal(10, 1), 2)
         tax = round(subtotal * random.uniform(0.05, 0.18), 2)
-        invs.append({
-            "invoice_id": _code("INV", i),
-            "vendor_id": v["vendor_id"],
-            "po_id": po_id,
-            "invoice_date": inv_date.isoformat(),
-            "due_date": due.isoformat(),
-            "currency": v["currency"],
-            "subtotal": subtotal,
-            "tax": tax,
-            "total_amount": round(subtotal + tax, 2),
-            "status": "Paid" if random.random() < 0.75 else "Pending",
-            "injected_error": None,
-        })
+        invs.append(
+            {
+                "invoice_id": _code("INV", i),
+                "vendor_id": v["vendor_id"],
+                "po_id": po_id,
+                "invoice_date": inv_date.isoformat(),
+                "due_date": due.isoformat(),
+                "currency": v["currency"],
+                "subtotal": subtotal,
+                "tax": tax,
+                "total_amount": round(subtotal + tax, 2),
+                "status": "Paid" if random.random() < 0.75 else "Pending",
+                "injected_error": None,
+            }
+        )
     return pd.DataFrame(invs)
 
 
@@ -251,28 +287,30 @@ def gen_payments_and_bank(invs, vendors):
             break
         v = vmap[inv["vendor_id"]]
         pay_date = date.fromisoformat(inv["invoice_date"]) + timedelta(days=random.randint(1, 40))
-        if pay_date > END:
-            pay_date = END
+        pay_date = min(pay_date, END)
         full = inv["total_amount"]
-        if random.random() < 0.05:
-            amount = round(full * random.uniform(0.6, 0.9), 2)  # partial
-        else:
-            amount = full
+        amount = round(full * random.uniform(0.6, 0.9), 2) if random.random() < 0.05 else full
         ref = f"BNK{_code('', pay_seq, 6)}"
-        payments.append({
-            "payment_id": _code("PAY", pay_seq),
-            "invoice_id": inv["invoice_id"],
-            "payment_date": pay_date.isoformat(),
-            "amount": round(amount, 2),
-            "currency": inv["currency"],
-            "bank_reference": ref,
-            "payment_method": random.choice(["NEFT", "RTGS", "Wire", "Check"]),
-            "status": "completed",
-            "approval_status": "Approved" if amount < 5_000_000 else random.choice(["Approved", "Pending"]),
-            "approved_by": fake.name() if amount < 5_000_000 else None,
-            "injected_error": None,
-        })
-        bank.append(_bank_row(bank_seq, ref, -amount, inv["currency"], v["vendor_name"], pay_date, "Debit"))
+        payments.append(
+            {
+                "payment_id": _code("PAY", pay_seq),
+                "invoice_id": inv["invoice_id"],
+                "payment_date": pay_date.isoformat(),
+                "amount": round(amount, 2),
+                "currency": inv["currency"],
+                "bank_reference": ref,
+                "payment_method": random.choice(["NEFT", "RTGS", "Wire", "Check"]),
+                "status": "completed",
+                "approval_status": "Approved"
+                if amount < 5_000_000
+                else random.choice(["Approved", "Pending"]),
+                "approved_by": fake.name() if amount < 5_000_000 else None,
+                "injected_error": None,
+            }
+        )
+        bank.append(
+            _bank_row(bank_seq, ref, -amount, inv["currency"], v["vendor_name"], pay_date, "Debit")
+        )
         bank_seq += 1
         pay_seq += 1
 
@@ -285,8 +323,17 @@ def gen_payments_and_bank(invs, vendors):
             amt = -amt
         elif ttype == "Fee":
             amt = -round(random.uniform(10, 500), 2)
-        bank.append(_bank_row(bank_seq, f"BNK{_code('X', bank_seq, 6)}", amt, "INR",
-                               fake.company(), _rand_date(), ttype))
+        bank.append(
+            _bank_row(
+                bank_seq,
+                f"BNK{_code('X', bank_seq, 6)}",
+                amt,
+                "INR",
+                fake.company(),
+                _rand_date(),
+                ttype,
+            )
+        )
         bank_seq += 1
     return pd.DataFrame(payments), pd.DataFrame(bank)
 
@@ -318,17 +365,19 @@ def gen_customer_invoices(customers):
         due = inv_date + timedelta(days=random.choice([15, 30, 45]))
         subtotal = round(np.random.lognormal(10.2, 1), 2)
         tax = round(subtotal * random.uniform(0.05, 0.18), 2)
-        rows.append({
-            "customer_invoice_id": _code("CINV", i),
-            "customer_id": c["customer_id"],
-            "invoice_date": inv_date.isoformat(),
-            "due_date": due.isoformat(),
-            "currency": c["currency"],
-            "subtotal": subtotal,
-            "tax": tax,
-            "total_amount": round(subtotal + tax, 2),
-            "status": "Paid" if random.random() < 0.7 else "Pending",
-        })
+        rows.append(
+            {
+                "customer_invoice_id": _code("CINV", i),
+                "customer_id": c["customer_id"],
+                "invoice_date": inv_date.isoformat(),
+                "due_date": due.isoformat(),
+                "currency": c["currency"],
+                "subtotal": subtotal,
+                "tax": tax,
+                "total_amount": round(subtotal + tax, 2),
+                "status": "Paid" if random.random() < 0.7 else "Pending",
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -344,17 +393,19 @@ def gen_inventory(products, warehouses):
 
     def add_movement(prod, src, dst, qty, mtype, dt, cost):
         nonlocal mseq
-        movements.append({
-            "movement_id": mseq,
-            "product_id": prod,
-            "source_warehouse": src,
-            "destination_warehouse": dst,
-            "quantity": qty,
-            "unit_cost": round(cost, 2),
-            "movement_date": dt.isoformat(),
-            "movement_type": mtype,
-            "reference": f"MOV{mseq:06d}",
-        })
+        movements.append(
+            {
+                "movement_id": mseq,
+                "product_id": prod,
+                "source_warehouse": src,
+                "destination_warehouse": dst,
+                "quantity": qty,
+                "unit_cost": round(cost, 2),
+                "movement_date": dt.isoformat(),
+                "movement_type": mtype,
+                "reference": f"MOV{mseq:06d}",
+            }
+        )
         mseq += 1
 
     # seed initial stock
@@ -427,16 +478,18 @@ def gen_inventory(products, warehouses):
             if qty <= 0:
                 continue
             cost = pmap[prod]["unit_cost"]
-            snapshots.append({
-                "inventory_id": sseq,
-                "warehouse_id": wh,
-                "product_id": prod,
-                "quantity": qty,
-                "unit_cost": round(cost, 2),
-                "inventory_value": round(qty * cost, 2),
-                "snapshot_date": mdate,
-                "injected_error": None,
-            })
+            snapshots.append(
+                {
+                    "inventory_id": sseq,
+                    "warehouse_id": wh,
+                    "product_id": prod,
+                    "quantity": qty,
+                    "unit_cost": round(cost, 2),
+                    "inventory_value": round(qty * cost, 2),
+                    "snapshot_date": mdate,
+                    "injected_error": None,
+                }
+            )
             sseq += 1
             if len(snapshots) >= C.VOLUMES["inventory_snapshots"]:
                 break
@@ -452,15 +505,19 @@ def gen_expenses(employees):
     rows = []
     for i in range(1, C.VOLUMES["expenses"] + 1):
         e = random.choice(employees["employee_id"].tolist())
-        rows.append({
-            "expense_id": _code("EXP", i),
-            "employee_id": e,
-            "expense_date": _rand_date().isoformat(),
-            "category": random.choice(["Travel", "Software", "Logistics", "Office", "Training"]),
-            "amount": round(np.random.lognormal(8, 1), 2),
-            "currency": "INR",
-            "approval_status": "Approved" if random.random() < 0.85 else "Pending",
-        })
+        rows.append(
+            {
+                "expense_id": _code("EXP", i),
+                "employee_id": e,
+                "expense_date": _rand_date().isoformat(),
+                "category": random.choice(
+                    ["Travel", "Software", "Logistics", "Office", "Training"]
+                ),
+                "amount": round(np.random.lognormal(8, 1), 2),
+                "currency": "INR",
+                "approval_status": "Approved" if random.random() < 0.85 else "Pending",
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -469,7 +526,6 @@ def gen_expenses(employees):
 # ---------------------------------------------------------------------------
 def inject_errors(invs, payments, bank, snapshots, vendors):
     rng = random.Random(C.SEED + 1)
-    vmap = vendors.set_index("vendor_id").to_dict("index")
 
     def pick(df, col, rate, used=None):
         n = max(1, int(len(df) * rate))
@@ -494,7 +550,7 @@ def inject_errors(invs, payments, bank, snapshots, vendors):
     payments = payments.drop(payments.index[idx]).reset_index(drop=True)
     # (reconciliation detects MISSING_PAYMENT for the orphaned invoices)
 
-    # Natural duplicate (vendor+amount) keys — avoid injecting payment errors
+    # Natural duplicate (vendor+amount) keys - avoid injecting payment errors
     # on these so DUPLICATE priority doesn't mask the intended status.
     _d = invs.copy()
     _d["key"] = _d["vendor_id"].astype(str) + "|" + _d["total_amount"].astype(str)
@@ -510,7 +566,9 @@ def inject_errors(invs, payments, bank, snapshots, vendors):
             tot = inv.iloc[0]["total_amount"]
             if f"{inv.iloc[0]['vendor_id']}|{tot}" in dup_keys:
                 continue
-            payments.iat[i, payments.columns.get_loc("amount")] = round(tot * rng.uniform(1.05, 1.15), 2)
+            payments.iat[i, payments.columns.get_loc("amount")] = round(
+                tot * rng.uniform(1.05, 1.15), 2
+            )
             payments.iat[i, payments.columns.get_loc("injected_error")] = "amount_mismatch"
 
     # Currency mismatch: payment currency != invoice currency (disjoint)
@@ -541,7 +599,9 @@ def inject_errors(invs, payments, bank, snapshots, vendors):
     idx = pick(bank, "transaction_id", C.ERROR_RATES["wrong_vendor_mapping"], used_bank)
     for i in idx:
         if bank.iloc[i]["transaction_type"] == "Debit":
-            bank.iat[i, bank.columns.get_loc("counterparty")] = f"UNKNOWN-COUNTERPARTY-{rng.randint(1000, 9999)}"
+            bank.iat[i, bank.columns.get_loc("counterparty")] = (
+                f"UNKNOWN-COUNTERPARTY-{rng.randint(1000, 9999)}"
+            )
             bank.iat[i, bank.columns.get_loc("injected_error")] = "wrong_vendor_mapping"
 
     # Duplicate bank transaction (disjoint)
@@ -558,9 +618,13 @@ def inject_errors(invs, payments, bank, snapshots, vendors):
     idx = pick(bank, "transaction_id", C.ERROR_RATES["unusual_txn"], used_bank)
     for i in idx:
         if bank.iloc[i]["amount"] > 0:
-            bank.iat[i, bank.columns.get_loc("amount")] = -abs(bank.iloc[i]["amount"]) * rng.uniform(5, 12)
+            bank.iat[i, bank.columns.get_loc("amount")] = -abs(
+                bank.iloc[i]["amount"]
+            ) * rng.uniform(5, 12)
         else:
-            bank.iat[i, bank.columns.get_loc("amount")] = bank.iloc[i]["amount"] * rng.uniform(5, 12)
+            bank.iat[i, bank.columns.get_loc("amount")] = bank.iloc[i]["amount"] * rng.uniform(
+                5, 12
+            )
         bank.iat[i, bank.columns.get_loc("injected_error")] = "unusual_txn"
 
     # Inventory mismatch: alter snapshot value / quantity
@@ -569,7 +633,8 @@ def inject_errors(invs, payments, bank, snapshots, vendors):
         q = snapshots.iloc[i]["quantity"]
         snapshots.iat[i, snapshots.columns.get_loc("quantity")] = int(q * rng.uniform(0.3, 1.8))
         snapshots.iat[i, snapshots.columns.get_loc("inventory_value")] = round(
-            snapshots.iloc[i]["quantity"] * snapshots.iloc[i]["unit_cost"], 2)
+            snapshots.iloc[i]["quantity"] * snapshots.iloc[i]["unit_cost"], 2
+        )
         snapshots.iat[i, snapshots.columns.get_loc("injected_error")] = "inventory_mismatch"
 
     return invs, payments, bank, snapshots

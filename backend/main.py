@@ -1,5 +1,7 @@
 """FastAPI application for FinanceOps360."""
+
 from __future__ import annotations
+
 import sys
 from pathlib import Path
 
@@ -11,14 +13,21 @@ sys.path.insert(0, str(ROOT / "python"))
 
 from backend import services  # noqa: E402
 from backend.schemas import (  # noqa: E402
-    Vendor, Invoice, Payment, Transaction, InventoryRow, ReconciliationRow,
-    Anomaly, Metrics, AIQuestion, AIAnswer,
+    AIAnswer,
+    AIQuestion,
+    Anomaly,
+    InventoryRow,
+    Invoice,
+    Metrics,
+    Payment,
+    ReconciliationRow,
+    Transaction,
+    Vendor,
 )
 
 app = FastAPI(title="FinanceOps360 API", version="1.0.0")
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
-                   allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 @app.get("/health")
@@ -74,4 +83,5 @@ def metrics():
 @app.post("/ai/ask", response_model=AIAnswer)
 async def ai_ask(q: AIQuestion):
     from backend.ai.copilot import ask
+
     return await ask(q.question)

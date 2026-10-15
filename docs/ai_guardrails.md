@@ -1,4 +1,4 @@
-# AI Guardrails — Finance Operations Copilot
+# AI Guardrails - Finance Operations Copilot
 
 The copilot is an **analysis assistant**, never an autonomous agent. It answers
 business questions by translating them into **validated, read-only SQL**.
@@ -9,22 +9,26 @@ question → LLM → SQL → VALIDATE → Postgres (read-only) → verified rows
 ```
 
 ## Guardrails (enforced in `backend/ai/copilot.py`)
-1. **Read-only** — connection uses a read-only role; no writes possible.
-2. **SELECT-only** — generated SQL must start with `SELECT`.
-3. **Forbidden keywords** — `INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/CREATE/
-   GRANT/MERGE/EXEC` are blocked.
-4. **Table allowlist** — only known analytics tables/views may appear in
+1. **Read-only** - the API (including the copilot) connects as the
+   `financeops_ro` role (created by `sql/readonly_role.sql` via
+   `python/persist.py`); no writes possible.
+2. **SELECT-only** - generated SQL must start with `SELECT`.
+3. **Forbidden keywords** - `INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/CREATE/
+   GRANT/MERGE/EXEC/EXECUTE/PG_SLEEP/SLEEP` are blocked.
+4. **FROM clause required** - statement-less function calls such as
+   `SELECT pg_sleep(10)` are rejected.
+5. **Table allowlist** - only known analytics tables/views may appear in
    FROM/JOIN. Unknown tables rejected.
-5. **No fabricated numbers** — all figures come from SQL/Python aggregation,
+6. **No fabricated numbers** - all figures come from SQL/Python aggregation,
    never from the LLM. The LLM only explains returned rows.
-6. **Human review for actions** — the copilot never initiates payments or
+7. **Human review for actions** - the copilot never initiates payments or
    changes; it only reports.
-7. **Graceful fallback** — if no API key is configured, a rule-based stub
+8. **Graceful fallback** - if no API key is configured, a rule-based stub
    answers the common portfolio questions without an LLM.
 
 ## Validation function
-`validate_sql(sql) -> (ok, error)`. Regex-based checks for forbidden keywords
-and a table allowlist parsed from FROM/JOIN clauses.
+`validate_sql(sql) -> (ok, error)`. Checks SELECT-only, forbidden keywords, a
+required FROM clause, and a table allowlist parsed from FROM/JOIN clauses.
 
 ## Example
 Q: "Which vendors have the highest outstanding payments?"

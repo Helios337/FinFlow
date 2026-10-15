@@ -1,4 +1,4 @@
-# Business Requirements — FinanceOps360
+# Business Requirements - FinanceOps360
 
 ## Business users
 - Finance Manager (daily oversight of payables/receivables)
