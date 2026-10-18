@@ -71,10 +71,12 @@ pytest tests/ -v
 The CI workflow does this automatically (generate data, then lint + test).
 
 ## Results (sample run)
-- ~80K records; reconciliation match rate ~77%.
-- Controls found: C1 duplicates, C4 payment>invoice, C5 inventory, C6 late,
-  C7 wrong counterparty, C8 duplicate bank.
-- ~800 anomalies (unusual amounts, IQR, vendor-baseline).
+- ~80K records; reconciliation match rate ~76%.
+- Controls found: C1 duplicates, C2 authorization, C4 payment>invoice,
+  C5 inventory, C6 late, C7 wrong counterparty, C8 duplicate bank.
+- ~1.5K anomalies (unusual amounts, IQR, vendor-baseline); the
+  unusual-transaction detector uses a robust median/MAD z-score
+  because bank amounts are heavily right-skewed.
 
 ## Limitations / future
 - Inventory turnover approximated (no COGS in model).

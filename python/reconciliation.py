@@ -113,22 +113,10 @@ def reconcile(invoices, payments, bank, vendors=None):
                 )
             )
             continue
-        if float(pay["amount"]) < inv_total - tol:
-            results.append(
-                _row(
-                    iid,
-                    pid,
-                    ref,
-                    "PARTIAL_PAYMENT",
-                    conf,
-                    diff,
-                    True,
-                    f"Partial/under payment: {diff} short of invoice total.",
-                )
-            )
-            continue
 
-        # bank match by reference (debit side)
+        # bank match by reference (debit side). Checked BEFORE the
+        # partial-payment check to honor the documented status priority:
+        # MISSING_BANK_TRANSACTION > PARTIAL_PAYMENT.
         bank_match = None
         if ref in bank_by_ref.groups:
             cands = bank_by_ref.get_group(ref)
@@ -147,6 +135,21 @@ def reconcile(invoices, payments, bank, vendors=None):
                     diff,
                     True,
                     "Payment has no matching bank transaction by reference.",
+                )
+            )
+            continue
+
+        if float(pay["amount"]) < inv_total - tol:
+            results.append(
+                _row(
+                    iid,
+                    pid,
+                    ref,
+                    "PARTIAL_PAYMENT",
+                    conf,
+                    diff,
+                    True,
+                    f"Partial/under payment: {diff} short of invoice total.",
                 )
             )
             continue

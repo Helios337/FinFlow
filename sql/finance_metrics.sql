@@ -3,10 +3,20 @@
 -- Run these in psql / Power BI / notebooks. 40+ queries across the project.
 -- ============================================================================
 
--- 1. Total vendor payables (outstanding) in INR
-SELECT SUM(total_inr) AS total_payables_inr
-FROM v_vendor_invoices_inr
-WHERE invoice_id NOT IN (SELECT invoice_id FROM reconciliation_results WHERE status IN ('MATCHED','PARTIAL_PAYMENT'));
+-- 1. Total vendor payables (outstanding) in INR.
+-- MATCHED / overpaid (AMOUNT_MISMATCH) -> 0; PARTIAL_PAYMENT ->
+-- residual balance (total - paid, FX-converted); everything else
+-- (unpaid, wrong currency or no bank confirmation) -> full total.
+SELECT COALESCE(SUM(
+    CASE WHEN r.status IN ('MATCHED','AMOUNT_MISMATCH') THEN 0
+         WHEN r.status = 'PARTIAL_PAYMENT'
+             THEN GREATEST(vi.total_inr - COALESCE(p.amount, 0) *
+                  (vi.total_inr / NULLIF(vi.total_amount, 0)), 0)
+         ELSE vi.total_inr END), 0) AS total_payables_inr
+FROM v_vendor_invoices_inr vi
+LEFT JOIN reconciliation_results r ON r.invoice_id = vi.invoice_id
+LEFT JOIN (SELECT invoice_id, SUM(amount) AS amount FROM payments
+           GROUP BY invoice_id) p ON p.invoice_id = vi.invoice_id;
 
 -- 2. Total receivables in INR
 SELECT SUM(total_amount * COALESCE(f.rate_to_inr,1)) AS total_receivables_inr
@@ -19,9 +29,16 @@ SELECT aging_bucket, COUNT(*) AS invoices, SUM(total_inr) AS amount_inr
 FROM v_ap_aging GROUP BY aging_bucket ORDER BY aging_bucket;
 
 -- 4. Vendor payable by vendor (top 10)
-SELECT vendor_id, SUM(total_inr) AS payable_inr
-FROM v_vendor_invoices_inr
-WHERE invoice_id NOT IN (SELECT invoice_id FROM reconciliation_results WHERE status IN ('MATCHED','PARTIAL_PAYMENT'))
+SELECT vendor_id, SUM(
+    CASE WHEN r.status IN ('MATCHED','AMOUNT_MISMATCH') THEN 0
+         WHEN r.status = 'PARTIAL_PAYMENT'
+             THEN GREATEST(vi.total_inr - COALESCE(p.amount, 0) *
+                  (vi.total_inr / NULLIF(vi.total_amount, 0)), 0)
+         ELSE vi.total_inr END) AS payable_inr
+FROM v_vendor_invoices_inr vi
+LEFT JOIN reconciliation_results r ON r.invoice_id = vi.invoice_id
+LEFT JOIN (SELECT invoice_id, SUM(amount) AS amount FROM payments
+           GROUP BY invoice_id) p ON p.invoice_id = vi.invoice_id
 GROUP BY vendor_id ORDER BY payable_inr DESC LIMIT 10;
 
 -- 5. Vendor concentration (top vendors % of spend)

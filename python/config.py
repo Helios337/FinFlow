@@ -53,6 +53,13 @@ ERROR_RATES = {
     "wrong_vendor_mapping": 0.005,
     "inventory_mismatch": 0.010,
     "unusual_txn": 0.006,
+    # payment has no matching bank transaction (reconciliation
+    # -> MISSING_BANK_TRANSACTION)
+    "missing_bank": 0.008,
+    # high-value payment (> 5,000,000 INR) without approval
+    # (control C2); the base distribution (median ~24k) never
+    # reaches the authorization threshold on its own
+    "unauthorized_payment": 0.002,
 }
 
 # Business date window

@@ -6,6 +6,26 @@ from . import db
 
 LIMIT = 200
 
+# Outstanding payable amount (INR) for a vendor invoice, given its
+# reconciliation status. MATCHED / overpaid (AMOUNT_MISMATCH) -> 0;
+# PARTIAL_PAYMENT -> residual balance (total - paid, FX-converted);
+# everything else (unpaid, wrong currency or no bank confirmation)
+# -> full invoice total. Matches python/finance_metrics.py and
+# sql/finance_metrics.sql.
+AP_OUTSTANDING_SQL = (
+    "COALESCE(CASE WHEN r.status IN ('MATCHED','AMOUNT_MISMATCH') THEN 0 "
+    "WHEN r.status = 'PARTIAL_PAYMENT' THEN GREATEST("
+    "vi.total_inr - COALESCE(p.amount, 0) * "
+    "(vi.total_inr / NULLIF(vi.total_amount, 0)), 0) "
+    "ELSE vi.total_inr END, 0)"
+)
+AP_JOIN_SQL = (
+    "v_vendor_invoices_inr vi "
+    "LEFT JOIN reconciliation_results r ON r.invoice_id = vi.invoice_id "
+    "LEFT JOIN (SELECT invoice_id, SUM(amount) AS amount FROM payments "
+    "GROUP BY invoice_id) p ON p.invoice_id = vi.invoice_id"
+)
+
 
 def get_vendors(limit=LIMIT):
     return db.fetch_all("SELECT * FROM vendors ORDER BY vendor_id LIMIT :l", {"l": limit})
@@ -62,9 +82,7 @@ def get_controls(limit=LIMIT):
 
 def get_metrics():
     payables = db.fetch_one(
-        "SELECT COALESCE(SUM(total_inr),0) AS v FROM v_vendor_invoices_inr "
-        "WHERE invoice_id NOT IN (SELECT invoice_id FROM reconciliation_results "
-        "WHERE status IN ('MATCHED','PARTIAL_PAYMENT'))"
+        f"SELECT COALESCE(SUM({AP_OUTSTANDING_SQL}),0) AS v FROM {AP_JOIN_SQL}"
     )
     receivables = db.fetch_one(
         "SELECT COALESCE(SUM(total_amount * COALESCE(f.rate_to_inr,1)),0) AS v "
@@ -73,9 +91,7 @@ def get_metrics():
         "WHERE ci.status <> 'Paid'"
     )
     outstanding = db.fetch_one(
-        "SELECT COUNT(*) AS c FROM vendor_invoices "
-        "WHERE invoice_id NOT IN (SELECT invoice_id FROM reconciliation_results "
-        "WHERE status IN ('MATCHED','PARTIAL_PAYMENT'))"
+        f"SELECT COUNT(*) AS c FROM {AP_JOIN_SQL} WHERE {AP_OUTSTANDING_SQL} > 0"
     )
     rec = db.fetch_all("SELECT status, COUNT(*) AS c FROM reconciliation_results GROUP BY status")
     rec_map = {r["status"]: r["c"] for r in rec}
