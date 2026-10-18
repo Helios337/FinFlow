@@ -594,6 +594,25 @@ def inject_errors(invs, payments, bank, snapshots, vendors):
             payments.iat[i, payments.columns.get_loc("payment_date")] = pd_.isoformat()
             payments.iat[i, payments.columns.get_loc("injected_error")] = "timing_diff"
 
+    # Missing bank transaction: drop the bank row for the
+    # payment so reconciliation reports MISSING_BANK_TRANSACTION.
+    # Kept disjoint from the payment-level errors above and from
+    # natural duplicate invoices so the resulting status is
+    # unambiguous.
+    idx = pick(payments, "payment_id", C.ERROR_RATES["missing_bank"], used_pay)
+    missing_refs = set()
+    for i in idx:
+        inv_id = payments.iloc[i]["invoice_id"]
+        inv = invs[invs["invoice_id"] == inv_id]
+        if len(inv) and (
+            f"{inv.iloc[0]['vendor_id']}|{inv.iloc[0]['total_amount']}" in dup_keys
+        ):
+            continue
+        missing_refs.add(payments.iloc[i]["bank_reference"])
+        payments.iat[i, payments.columns.get_loc("injected_error")] = "missing_bank"
+    if missing_refs:
+        bank = bank[~bank["reference"].isin(missing_refs)].reset_index(drop=True)
+
     used_bank = set()
     # Wrong vendor mapping: bank counterparty != vendor name (disjoint)
     idx = pick(bank, "transaction_id", C.ERROR_RATES["wrong_vendor_mapping"], used_bank)
@@ -636,6 +655,88 @@ def inject_errors(invs, payments, bank, snapshots, vendors):
             snapshots.iloc[i]["quantity"] * snapshots.iloc[i]["unit_cost"], 2
         )
         snapshots.iat[i, snapshots.columns.get_loc("injected_error")] = "inventory_mismatch"
+
+    # Unauthorized high-value payments (control C2): append a few
+    # large invoices with matching unapproved payments. The
+    # payment amount equals the invoice total so C4 (payment >
+    # invoice) does not also fire, and the invoice has no PO so
+    # C3 does not fire either. The base distribution (median
+    # ~24k) never reaches the 5,000,000 authorization threshold
+    # on its own, so without this the control can never fire.
+    rng_c2 = random.Random(C.SEED + 2)
+    n_c2 = max(1, int(len(payments) * C.ERROR_RATES["unauthorized_payment"]))
+    vrows = vendors.to_dict("records")
+    for k in range(n_c2):
+        v = vrows[rng_c2.randrange(len(vrows))]
+        amt = round(6_000_000 * rng_c2.uniform(1.0, 1.4), 2)
+        iid = f"INV{900000 + k}"
+        pid = f"PAY{900000 + k}"
+        ref = f"BNK{900000 + k:06d}"
+        invs = pd.concat(
+            [
+                invs,
+                pd.DataFrame(
+                    [
+                        {
+                            "invoice_id": iid,
+                            "vendor_id": v["vendor_id"],
+                            "po_id": None,
+                            "invoice_date": C.START_DATE,
+                            "due_date": C.START_DATE,
+                            "currency": v["currency"],
+                            "subtotal": amt,
+                            "tax": 0.0,
+                            "total_amount": amt,
+                            "status": "Pending",
+                            "injected_error": "unauthorized_payment",
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
+        payments = pd.concat(
+            [
+                payments,
+                pd.DataFrame(
+                    [
+                        {
+                            "payment_id": pid,
+                            "invoice_id": iid,
+                            "payment_date": C.START_DATE,
+                            "amount": amt,
+                            "currency": v["currency"],
+                            "bank_reference": ref,
+                            "payment_method": "RTGS",
+                            "status": "completed",
+                            "approval_status": "Pending",
+                            "approved_by": None,
+                            "injected_error": "unauthorized_payment",
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
+        bank = pd.concat(
+            [
+                bank,
+                pd.DataFrame(
+                    [
+                        _bank_row(
+                            900000 + k,
+                            ref,
+                            -amt,
+                            v["currency"],
+                            v["vendor_name"],
+                            date.fromisoformat(C.START_DATE),
+                            "Debit",
+                        )
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
 
     return invs, payments, bank, snapshots
 

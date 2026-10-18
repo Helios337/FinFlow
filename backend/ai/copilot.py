@@ -69,13 +69,21 @@ def validate_sql(sql: str) -> tuple[bool, str]:
         return False, "Only SELECT queries are permitted."
     if FORBIDDEN.search(s):
         return False, "Statement contains a forbidden keyword."
+    # Single statement only: an embedded semicolon could smuggle a
+    # second statement past the allowlist.
+    if ";" in s:
+        return False, "Only a single statement is permitted."
     # Require a FROM clause so statement-less function calls such as
     # `SELECT pg_sleep(10)` cannot be executed against the database.
     if not re.search(r"\bfrom\b", s, re.I):
         return False, "Query must reference a table (FROM clause required)."
-    # table allowlist
-    found = set(re.findall(r"from\s+([a-z_][a-z0-9_]*)", s, re.I))
-    found |= set(re.findall(r"join\s+([a-z_][a-z0-9_]*)", s, re.I))
+    # Table allowlist. Match unquoted identifiers, then double-quoted
+    # ones too: a quoted name (FROM "secret") would otherwise evade
+    # the unquoted-only pattern and bypass the allowlist.
+    found = set(m.lower() for m in re.findall(r"from\s+([a-z_][a-z0-9_]*)", s, re.I))
+    found |= set(m.lower() for m in re.findall(r"join\s+([a-z_][a-z0-9_]*)", s, re.I))
+    for m in re.finditer(r'''\b(?:from|join)\s+"([^"]+)"''', s, re.I):
+        found.add(m.group(1).split(".")[-1].lower())
     bad = found - ALLOWED_TABLES
     if bad:
         return False, f"Table(s) not allowed: {', '.join(sorted(bad))}"
@@ -86,14 +94,14 @@ def _stub_answer(question: str) -> dict:
     q = question.lower()
     if ("vendor" in q) and ("payable" in q or "payment" in q or "outstanding" in q):
         rows = db.fetch_all(
-            "SELECT vi.vendor_id, SUM(vi.total_inr) AS payable_inr FROM v_vendor_invoices_inr vi "
-            "WHERE vi.invoice_id NOT IN (SELECT invoice_id FROM reconciliation_results WHERE status IN ('MATCHED','PARTIAL_PAYMENT')) "
+            "SELECT vi.vendor_id, SUM(" + services.AP_OUTSTANDING_SQL + ") AS payable_inr "
+            "FROM " + services.AP_JOIN_SQL + " "
             "GROUP BY vi.vendor_id ORDER BY payable_inr DESC LIMIT 5"
         )
         return {
             "sql": "<rule-based>",
             "rows": rows,
-            "explanation": "Top 5 vendors by outstanding payable (INR), computed from unmatched invoices.",
+            "explanation": "Top 5 vendors by outstanding payable (INR), including residual balances on partially paid invoices.",
         }
     if "overdue" in q or "past due" in q:
         rows = db.fetch_all(

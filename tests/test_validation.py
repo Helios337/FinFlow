@@ -3,7 +3,7 @@
 
 def test_control_rules_fire(controls):
     rules = set(controls["rule_id"])
-    for r in ["C1", "C4", "C5", "C6", "C7", "C8"]:
+    for r in ["C1", "C2", "C4", "C5", "C6", "C7", "C8"]:
         assert r in rules, f"rule {r} did not fire"
 
 
@@ -49,3 +49,14 @@ def test_timing_diff_detected(raw, controls):
     c6 = set(controls[controls["rule_id"] == "C6"]["entity_id"].astype(str))
     assert inj_ids, "no injected timing rows"
     assert inj_ids.issubset(c6)
+
+
+def test_unauthorized_payment_detected(raw, controls):
+    inj_ids = set(
+        raw["payments"][
+            raw["payments"]["injected_error"] == "unauthorized_payment"
+        ]["payment_id"].astype(str)
+    )
+    c2 = set(controls[controls["rule_id"] == "C2"]["entity_id"].astype(str))
+    assert inj_ids, "no injected unauthorized payments"
+    assert inj_ids.issubset(c2)

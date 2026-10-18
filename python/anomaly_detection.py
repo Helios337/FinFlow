@@ -28,29 +28,41 @@ def _anom(tx_id, table, atype, score, severity, reason, expected, observed, acti
 def detect(frames):
     anomalies = []
 
-    # 1) Bank unusual transactions: z-score on debit magnitudes
+    # 1) Bank unusual transactions: robust z-score (median/MAD) on
+    # transaction magnitudes. Bank amounts are heavily right-skewed
+    # (lognormal), so a mean/std z-score is distorted by the very
+    # outliers it is meant to detect and misses most of them; the
+    # median/MAD pair is robust to heavy tails. All transaction types
+    # are evaluated (not only debits) so unusual credits, refunds and
+    # fees are flagged too.
     bank = frames["bank_transactions"].copy()
-    debits = bank[bank["transaction_type"].isin(["Debit", "Transfer"])].copy()
-    debits["mag"] = debits["amount"].abs()
-    if len(debits) > 10:
-        mu, sd = debits["mag"].mean(), debits["mag"].std() + 1e-9
-        for _, r in debits.iterrows():
-            z = (r["mag"] - mu) / sd
-            if abs(z) > 3:
-                sev = "HIGH" if abs(z) > 4 else "MEDIUM"
-                anomalies.append(
-                    _anom(
-                        r["transaction_id"],
-                        "bank_transactions",
-                        "unusual_amount",
-                        abs(z),
-                        sev,
-                        f"Transaction magnitude {abs(z):.1f} sigma from bank mean.",
-                        mu,
-                        r["mag"],
-                        "Manual verification required.",
-                    )
+    bank["mag"] = bank["amount"].abs()
+    if len(bank) > 10:
+        med = bank["mag"].median()
+        mad = (bank["mag"] - med).abs().median()
+        # 1.4826 makes MAD a consistent estimator of the standard
+        # deviation under normality; fall back to std when MAD is 0.
+        scale = 1.4826 * mad if mad > 0 else float(bank["mag"].std())
+        if scale <= 0:
+            scale = float(bank["mag"].std()) + 1e-9
+        bank["z"] = (bank["mag"] - med) / scale
+        flagged = bank[bank["z"].abs() > 4.0]
+        for _, r in flagged.iterrows():
+            z = abs(float(r["z"]))
+            sev = "HIGH" if z > 5.0 else "MEDIUM"
+            anomalies.append(
+                _anom(
+                    r["transaction_id"],
+                    "bank_transactions",
+                    "unusual_amount",
+                    z,
+                    sev,
+                    f"Transaction magnitude {z:.1f} robust sigma from bank median.",
+                    med,
+                    r["mag"],
+                    "Manual verification required.",
                 )
+            )
 
     # 2) Invoice amount IQR outliers
     vi = frames["vendor_invoices"]

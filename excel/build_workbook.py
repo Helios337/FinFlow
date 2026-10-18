@@ -62,26 +62,48 @@ def build():
     controls = pd.read_csv(proc / "controls_report.csv")
     anomalies = pd.read_csv(proc / "anomaly_report.csv")
     inv = pd.read_csv(raw / "inventory.csv")
+    vi = pd.read_csv(raw / "vendor_invoices.csv")
+    metrics = pd.read_csv(proc / "finance_metrics.csv").iloc[0]
+
+    # True overdue: open (not fully matched) invoices past their
+    # due date as of the dataset end. MISSING_PAYMENT alone is
+    # NOT the same as overdue.
+    matched_ids = set(recon[recon["status"] == "MATCHED"]["invoice_id"])
+    open_vi = vi[~vi["invoice_id"].isin(matched_ids)].copy()
+    open_vi["due_date"] = pd.to_datetime(open_vi["due_date"])
+    asof = pd.Timestamp(C.END_DATE)
+    overdue_cnt = int((open_vi["due_date"] < asof).sum())
+
+    # Inventory value from the latest snapshot per (warehouse,
+    # product): the inventory table holds several snapshot dates
+    # per key, so summing all of them multi-counts the stock.
+    inv["snapshot_date"] = pd.to_datetime(inv["snapshot_date"])
+    latest_inv = (
+        inv.sort_values("snapshot_date")
+        .groupby(["warehouse_id", "product_id"])
+        .tail(1)
+    )
+    inventory_value = float((latest_inv["quantity"] * latest_inv["unit_cost"]).sum())
 
     kpis = [
         (
-            "Total Payables (INR)",
-            round(pd.read_csv(raw / "vendor_invoices.csv")["total_amount"].sum(), 2),
+            "Total Payables (INR, outstanding)",
+            round(float(metrics["total_payables_inr"]), 2),
         ),
         (
-            "Total Receivables (INR)",
-            round(pd.read_csv(raw / "customer_invoices.csv")["total_amount"].sum(), 2),
+            "Total Receivables (INR, outstanding)",
+            round(float(metrics["total_receivables_inr"]), 2),
         ),
-        ("Outstanding Invoices", int((recon["status"] != "MATCHED").sum())),
-        ("Overdue Invoices", int(recon["status"].isin(["MISSING_PAYMENT"]).sum())),
+        ("Outstanding (Unmatched) Invoices", int((recon["status"] != "MATCHED").sum())),
+        ("Overdue Invoices", overdue_cnt),
         ("Matched Transactions", int((recon["status"] == "MATCHED").sum())),
-        ("Unmatched Transactions", int((recon["status"] == "MISSING_PAYMENT").sum())),
+        ("Partial Payments", int((recon["status"] == "PARTIAL_PAYMENT").sum())),
         (
             "Mismatch Count",
             int(recon["status"].isin(["AMOUNT_MISMATCH", "CURRENCY_MISMATCH"]).sum()),
         ),
         ("Mismatch Value", round(recon["amount_diff"].abs().sum(), 2)),
-        ("Inventory Value (INR)", round((inv["quantity"] * inv["unit_cost"]).sum(), 2)),
+        ("Inventory Value (INR, latest snapshot)", round(inventory_value, 2)),
         ("Control Violations", len(controls)),
         ("Anomalies", len(anomalies)),
     ]

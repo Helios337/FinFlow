@@ -55,3 +55,28 @@ def test_metrics_include_inr_values(raw):
     assert "total_receivables_inr" in metrics
     assert metrics["total_payables_inr"] > 0
     assert metrics["total_receivables_inr"] > 0
+
+
+def test_guardrail_blocks_quoted_and_multi_statement():
+    # quoted identifiers must not evade the table allowlist
+    assert validate_sql('SELECT * FROM "pg_stat_activity"')[0] is False
+    assert validate_sql('SELECT * FROM "secret_table"')[0] is False
+    # quoted ALLOWED tables are still permitted
+    ok, _ = validate_sql('SELECT * FROM "vendors"')
+    assert ok
+    # multiple statements in one string are rejected
+    assert validate_sql("SELECT 1 FROM vendors; SELECT 2 FROM vendors")[0] is False
+
+
+def test_payables_include_partial_residual(raw):
+    rf = rload()
+    recon = reconcile(rf["invoices"], rf["payments"], rf["bank"], rf["vendors"])
+    vf = vload()
+    metrics, outstanding = compute(vf, recon)
+    part_ids = set(recon[recon["status"] == "PARTIAL_PAYMENT"]["invoice_id"])
+    assert part_ids, "no partial payments in data"
+    out_ids = set(outstanding["invoice_id"])
+    # partially paid invoices still owe their residual balance,
+    # so they must count as outstanding payables.
+    assert part_ids.issubset(out_ids)
+    assert metrics["outstanding_invoices"] >= len(part_ids)
