@@ -119,6 +119,7 @@ Each invoice is assigned exactly one mutually exclusive status using the followi
 | - | `MISSING_PAYMENT` | Invoice has no payment record |
 
 The amount tolerance is `max(0.5% of invoice total, 0.01)`.
+The engine checks the bank match before the partial-payment check so the priority order above is honored.
 A soft review flag is raised when the bank counterparty does not fuzzy-match the vendor name (ratio < 0.6) without changing the status.
 
 ## Financial controls
@@ -140,7 +141,7 @@ Eight rules (C1-C8) are evaluated on every run and written to `controls_violatio
 
 Anomalies are explainable, each tagged with a type, score, severity, and reason:
 
-- **Z-score** on bank debit magnitudes (flagged above 3 sigma).
+- **Robust z-score (median/MAD)** on bank transaction magnitudes, applied to all transaction types (not only debits) because bank amounts are heavily right-skewed; flagged above 4 robust sigma (HIGH above 5).
 - **IQR** on invoice amounts (outside 1.5x IQR).
 - **Vendor baseline** (invoice above vendor mean + 3 sigma).
 - **Isolation Forest** as an optional multivariate layer.
@@ -189,11 +190,12 @@ The guardrails enforced in `backend/ai/copilot.py` are:
 1. **Read-only** - the backend and copilot connect as the `financeops_ro` role (created by `sql/readonly_role.sql` via `python/persist.py`), so writes are impossible.
 2. **SELECT-only** - generated SQL must start with `SELECT`.
 3. **Forbidden keywords** - `INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/CREATE/GRANT/MERGE/EXEC/EXECUTE/PG_SLEEP/SLEEP` are blocked.
-4. **FROM clause required** - statement-less calls such as `SELECT pg_sleep(10)` are rejected.
-5. **Table allowlist** - only known analytics tables and views may appear in FROM/JOIN.
-6. **No fabricated numbers** - every figure comes from SQL or Python aggregation; the LLM only explains returned rows.
-7. **Human review for actions** - the copilot never initiates payments or changes; it only reports.
-8. **Graceful fallback** - with no API key configured, a rule-based stub answers common portfolio questions without an LLM.
+4. **Single statement only** - an embedded semicolon cannot smuggle a second statement past the allowlist.
+5. **FROM clause required** - statement-less calls such as `SELECT pg_sleep(10)` are rejected.
+6. **Table allowlist** - only known analytics tables and views may appear in FROM/JOIN, and both unquoted and double-quoted identifiers are matched so `FROM "secret"` cannot bypass it.
+7. **No fabricated numbers** - every figure comes from SQL or Python aggregation; the LLM only explains returned rows.
+8. **Human review for actions** - the copilot never initiates payments or changes; it only reports.
+9. **Graceful fallback** - with no API key configured, a rule-based stub answers common portfolio questions without an LLM.
 
 See [docs/ai_guardrails.md](docs/ai_guardrails.md) for the full specification.
 
@@ -246,12 +248,13 @@ The suite covers reconciliation and control recall on injected errors, metric sa
 The CI workflow generates the data, lints with Ruff, and runs the tests automatically.
 
 ## Results (sample run)
+
 | Metric | Value |
 |---|---|
 | Records generated | ~80K rows across 14 tables (seeded, deterministic) |
-| Reconciliation match rate | ~77% |
-| Controls triggered | C1 duplicates, C4 payment > invoice, C5 inventory, C6 late, C7 wrong counterparty, C8 duplicate bank |
-| Anomalies detected | ~800 (unusual amounts, IQR, vendor-baseline) |
+| Reconciliation match rate | ~76% |
+| Controls triggered | C1 duplicates, C2 authorization, C4 payment > invoice, C5 inventory, C6 late, C7 wrong counterparty, C8 duplicate bank |
+| Anomalies detected | ~1.5K (robust-z unusual amounts, IQR, vendor-baseline) |
 
 ## Limitations and roadmap
 
