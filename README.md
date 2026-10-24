@@ -6,7 +6,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-FinFlow (service name "FinanceOps360") is an end-to-end financial operations analytics and automation platform.
+FinFlow is an end-to-end financial operations analytics and automation platform.
 It ingests a deterministic synthetic ledger for a medical-device company, reconciles invoices to payments to bank transactions, detects discrepancies and anomalies, evaluates eight financial controls, and exposes executive reporting through SQL, Excel, Power BI, a FastAPI REST API, and a guardrailed AI copilot.
 
 The reporting currency is INR, with all non-INR amounts converted using daily FX rates before aggregation.
