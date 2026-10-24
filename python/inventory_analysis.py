@@ -13,13 +13,24 @@ def analyze(frames):
     wh = frames["warehouses"]
     cap = {r["warehouse_id"]: r["capacity_units"] for r in wh.to_dict("records")}
 
-    # valuation
-    inv["inventory_value"] = inv["quantity"] * inv["unit_cost"]
+    inv["snapshot_date"] = pd.to_datetime(inv["snapshot_date"])
+    # Current state = latest snapshot per (warehouse, product). The
+    # inventory table stores several snapshot dates per key, so summing
+    # quantity across all of them multi-counts the same stock (~4x here)
+    # and inflates utilization / valuation.
+    current = (
+        inv.sort_values("snapshot_date")
+        .groupby(["warehouse_id", "product_id"])
+        .tail(1)
+        .copy()
+    )
+
+    # valuation (current stock)
+    current["inventory_value"] = current["quantity"] * current["unit_cost"]
 
     # warehouse utilization (units on hand vs capacity)
-    inv["snapshot_date"] = pd.to_datetime(inv["snapshot_date"])
     util = (
-        inv.groupby("warehouse_id")["quantity"]
+        current.groupby("warehouse_id")["quantity"]
         .sum()
         .reset_index()
         .rename(columns={"quantity": "total_units"})
@@ -29,21 +40,21 @@ def analyze(frames):
         util["total_units"] / util["capacity_units"].replace(0, np.nan) * 100
     ).round(2)
 
-    # low / over stock per product (median-based)
-    med = inv.groupby("product_id")["quantity"].median()
-    low = inv[inv["quantity"] < SAFETY_STOCK].copy()
+    # low / over stock per product (median-based, current stock)
+    med = current.groupby("product_id")["quantity"].median()
+    low = current[current["quantity"] < SAFETY_STOCK].copy()
     low["flag"] = "LOW_STOCK"
-    over = inv[inv["quantity"] > inv["product_id"].map(med) * 2].copy()
+    over = current[current["quantity"] > current["product_id"].map(med) * 2].copy()
     over["flag"] = "OVERSTOCK"
 
     summary = {
-        "total_inventory_value": float(inv["inventory_value"].sum()),
-        "total_units": int(inv["quantity"].sum()),
+        "total_inventory_value": float(current["inventory_value"].sum()),
+        "total_units": int(current["quantity"].sum()),
         "low_stock_skus": int(low["product_id"].nunique()),
         "overstock_skus": int(over["product_id"].nunique()),
-        "warehouses": int(inv["warehouse_id"].nunique()),
+        "warehouses": int(current["warehouse_id"].nunique()),
     }
-    return inv, util, low, over, summary
+    return current, util, low, over, summary
 
 
 def main():

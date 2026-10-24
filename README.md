@@ -246,7 +246,6 @@ The suite covers reconciliation and control recall on injected errors, metric sa
 The CI workflow generates the data, lints with Ruff, and runs the tests automatically.
 
 ## Results (sample run)
-
 | Metric | Value |
 |---|---|
 | Records generated | ~80K rows across 14 tables (seeded, deterministic) |
